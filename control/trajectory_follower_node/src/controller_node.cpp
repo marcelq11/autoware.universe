@@ -56,6 +56,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
     case LongitudinalControllerMode::PID: {
       longitudinal_controller_ =
         std::make_shared<pid_longitudinal_controller::PidLongitudinalController>(*this);
+        RCLCPP_WARN(get_logger(),"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       break;
     }
     default:
@@ -91,8 +92,6 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
   }
 
   logger_configure_ = std::make_unique<tier4_autoware_utils::LoggerLevelConfigure>(this);
-
-  published_time_publisher_ = std::make_unique<tier4_autoware_utils::PublishedTimePublisher>(this);
 }
 
 Controller::LateralControllerMode Controller::getLateralControllerMode(
@@ -233,8 +232,7 @@ void Controller::callbackTimerControl()
   out.longitudinal = lon_out.control_cmd;
   control_cmd_pub_->publish(out);
 
-  // 6. publish debug
-  published_time_publisher_->publish_if_subscribed(control_cmd_pub_, out.stamp);
+  // 6. publish debug marker
   publishDebugMarker(*input_data, lat_out);
 }
 
