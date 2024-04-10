@@ -1,0 +1,3 @@
+[submodule "control/eadrc_longitudinal_controller"]
+	path = control/eadrc_longitudinal_controller
+	url = git@github.com:marcelq11/eadrc_longitudinal_controller.git
