@@ -365,16 +365,8 @@ private:
   Motion keepBrakeBeforeStop(
     const ControlData & control_data, const Motion & target_motion, const size_t nearest_idx) const;
 
-  /**
-   * @brief interpolate trajectory point that is nearest to vehicle
-   * @param [in] traj reference trajectory
-   * @param [in] point vehicle position
-   * @param [in] nearest_idx index of the trajectory point nearest to the vehicle position
-   */
-  std::pair<autoware_auto_planning_msgs::msg::TrajectoryPoint, size_t>
-  calcInterpolatedTrajPointAndSegment(
-    const autoware_auto_planning_msgs::msg::Trajectory & traj,
-    const geometry_msgs::msg::Pose & pose) const;
+
+
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands
