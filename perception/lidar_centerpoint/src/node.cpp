@@ -55,7 +55,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   const std::string head_onnx_path = this->declare_parameter<std::string>("head_onnx_path");
   const std::string head_engine_path = this->declare_parameter<std::string>("head_engine_path");
   class_names_ = this->declare_parameter<std::vector<std::string>>("class_names");
-  has_twist_ = this->declare_parameter("has_twist", false);
+  has_variance_ = this->declare_parameter<bool>("has_variance");
+  has_twist_ = this->declare_parameter<bool>("has_twist");
   const std::size_t point_feature_size =
     static_cast<std::size_t>(this->declare_parameter<std::int64_t>("point_feature_size"));
   const std::size_t max_voxel_size =
@@ -102,7 +103,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   CenterPointConfig config(
     class_names_.size(), point_feature_size, max_voxel_size, point_cloud_range, voxel_size,
     downsample_factor, encoder_in_feature_size, score_threshold, circle_nms_dist_threshold,
-    yaw_norm_thresholds);
+    yaw_norm_thresholds, has_variance_);
   detector_ptr_ =
     std::make_unique<CenterPointTRT>(encoder_param, head_param, densification_param, config);
 
@@ -126,6 +127,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     RCLCPP_INFO(this->get_logger(), "TensorRT engine is built and shutdown node.");
     rclcpp::shutdown();
   }
+  published_time_publisher_ = std::make_unique<tier4_autoware_utils::PublishedTimePublisher>(this);
 }
 
 void LidarCenterPointNode::pointCloudCallback(
@@ -151,7 +153,7 @@ void LidarCenterPointNode::pointCloudCallback(
   raw_objects.reserve(det_boxes3d.size());
   for (const auto & box3d : det_boxes3d) {
     autoware_auto_perception_msgs::msg::DetectedObject obj;
-    box3DToDetectedObject(box3d, class_names_, has_twist_, obj);
+    box3DToDetectedObject(box3d, class_names_, has_twist_, has_variance_, obj);
     raw_objects.emplace_back(obj);
   }
 
@@ -163,16 +165,24 @@ void LidarCenterPointNode::pointCloudCallback(
 
   if (objects_sub_count > 0) {
     objects_pub_->publish(output_msg);
+    published_time_publisher_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
   }
 
   // add processing time for debug
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    const double pipeline_latency_ms =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (this->get_clock()->now() - output_msg.header.stamp).nanoseconds()))
+        .count();
     debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
     debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
+    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+      "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 }
 

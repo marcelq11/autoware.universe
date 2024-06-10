@@ -15,6 +15,7 @@
 #define BEHAVIOR_PATH_LANE_CHANGE_MODULE__SCENE_HPP_
 
 #include "behavior_path_lane_change_module/utils/base_class.hpp"
+#include "behavior_path_lane_change_module/utils/data_structs.hpp"
 
 #include <memory>
 #include <utility>
@@ -72,6 +73,9 @@ public:
   bool calcAbortPath() override;
 
   PathSafetyStatus isApprovedPathSafe() const override;
+
+  PathSafetyStatus evaluateApprovedPathWithUnsafeHysteresis(
+    PathSafetyStatus approved_path_safety_status) override;
 
   bool isRequiredStop(const bool is_object_coming_from_rear) override;
 
@@ -147,8 +151,6 @@ protected:
     const lanelet::ConstLanelets & current_lanes,
     const lanelet::ConstLanelets & target_lanes) const;
 
-  TurnSignalInfo calcTurnSignalInfo() const override;
-
   bool isValidPath(const PathWithLaneId & path) const override;
 
   PathSafetyStatus isLaneChangePathSafe(
@@ -170,7 +172,11 @@ protected:
   bool isVehicleStuck(
     const lanelet::ConstLanelets & current_lanes, const double obstacle_check_distance) const;
 
+  double get_max_velocity_for_safety_check() const;
+
   bool isVehicleStuck(const lanelet::ConstLanelets & current_lanes) const;
+
+  bool check_prepare_phase() const;
 
   double calcMaximumLaneChangeLength(
     const lanelet::ConstLanelet & current_terminal_lanelet, const double max_acc) const;

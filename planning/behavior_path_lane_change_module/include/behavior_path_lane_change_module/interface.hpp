@@ -67,7 +67,7 @@ public:
 
   bool isExecutionReady() const override;
 
-  bool isRootLaneletToBeUpdated() const override
+  bool isCurrentRouteLaneletToBeReset() const override
   {
     return getCurrentStatus() == ModuleStatus::SUCCESS;
   }
@@ -126,7 +126,7 @@ protected:
 
   bool canTransitFailureState() override;
 
-  bool canTransitIdleToRunningState() override;
+  ModuleStatus setInitState() const override { return ModuleStatus::WAITING_APPROVAL; };
 
   void updateDebugMarker() const;
 

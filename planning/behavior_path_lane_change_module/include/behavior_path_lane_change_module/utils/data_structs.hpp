@@ -75,6 +75,11 @@ struct LaneChangeCancelParameters
   double duration{5.0};
   double max_lateral_jerk{10.0};
   double overhang_tolerance{0.0};
+
+  // unsafe_hysteresis_threshold will be compare with the number of detected unsafe instance. If the
+  // number of unsafe exceeds unsafe_hysteresis_threshold, the lane change will be cancelled or
+  // aborted.
+  int unsafe_hysteresis_threshold{2};
 };
 
 struct LaneChangeParameters
@@ -107,7 +112,9 @@ struct LaneChangeParameters
   double max_longitudinal_acc{1.0};
 
   // collision check
-  bool enable_prepare_segment_collision_check{true};
+  bool enable_collision_check_for_prepare_phase_in_general_lanes{false};
+  bool enable_collision_check_for_prepare_phase_in_intersection{true};
+  bool enable_collision_check_for_prepare_phase_in_turns{true};
   double prepare_segment_ignore_object_velocity_thresh{0.1};
   bool check_objects_on_current_lanes{true};
   bool check_objects_on_other_lanes{true};
