@@ -40,12 +40,6 @@
 #include <string>
 #include <vector>
 
-// set as macro so that calling function name will be printed.
-// debug print is heavy. turn on only when debugging.
-#define DEBUG_PRINT(...) \
-  RCLCPP_DEBUG_EXPRESSION(getLogger(), parameters_->print_debug_info, __VA_ARGS__)
-#define printShiftLines(p, msg) DEBUG_PRINT("[%s] %s", msg, toStrInfo(p).c_str())
-
 namespace behavior_path_planner
 {
 
@@ -109,7 +103,7 @@ AvoidanceModule::AvoidanceModule(
 
 bool AvoidanceModule::isExecutionRequested() const
 {
-  DEBUG_PRINT("AVOIDANCE isExecutionRequested");
+  RCLCPP_DEBUG(getLogger(), "AVOIDANCE isExecutionRequested");
 
   // Check ego is in preferred lane
   updateInfoMarker(avoid_data_);
@@ -132,7 +126,11 @@ bool AvoidanceModule::isExecutionRequested() const
 
 bool AvoidanceModule::isExecutionReady() const
 {
-  DEBUG_PRINT("AVOIDANCE isExecutionReady");
+  RCLCPP_DEBUG_STREAM(getLogger(), "---Avoidance GO/NO-GO status---");
+  RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "SAFE:" << avoid_data_.safe);
+  RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "COMFORTABLE:" << avoid_data_.comfortable);
+  RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "VALID:" << avoid_data_.valid);
+  RCLCPP_DEBUG_STREAM(getLogger(), std::boolalpha << "READY:" << avoid_data_.ready);
   return avoid_data_.safe && avoid_data_.comfortable && avoid_data_.valid && avoid_data_.ready;
 }
 
@@ -162,7 +160,7 @@ bool AvoidanceModule::isSatisfiedSuccessCondition(const AvoidancePlanningData & 
 
   const bool has_shift_point = !path_shifter_.getShiftLines().empty();
   const bool has_base_offset =
-    std::abs(path_shifter_.getBaseOffset()) > parameters_->lateral_avoid_check_threshold;
+    std::abs(path_shifter_.getBaseOffset()) > parameters_->lateral_execution_threshold;
 
   // Nothing to do. -> EXIT.
   if (!has_shift_point && !has_base_offset) {
@@ -734,7 +732,7 @@ bool AvoidanceModule::isSafePath(
     for (size_t i = ego_idx; i < shifted_path.shift_length.size(); i++) {
       const auto length = shifted_path.shift_length.at(i);
 
-      if (parameters_->lateral_avoid_check_threshold < length) {
+      if (parameters_->lateral_execution_threshold < length) {
         return true;
       }
     }
@@ -746,7 +744,7 @@ bool AvoidanceModule::isSafePath(
     for (size_t i = ego_idx; i < shifted_path.shift_length.size(); i++) {
       const auto length = shifted_path.shift_length.at(i);
 
-      if (parameters_->lateral_avoid_check_threshold < -1.0 * length) {
+      if (parameters_->lateral_execution_threshold < -1.0 * length) {
         return true;
       }
     }
@@ -1139,7 +1137,7 @@ void AvoidanceModule::addNewShiftLines(
   const auto new_shift_length = front_new_shift_line.end_shift_length;
   const auto new_shift_end_idx = front_new_shift_line.end_idx;
 
-  DEBUG_PRINT("min_start_idx = %lu", min_start_idx);
+  RCLCPP_DEBUG(getLogger(), "min_start_idx = %lu", min_start_idx);
 
   // Remove shift points that starts later than the new_shift_line from path_shifter.
   //
@@ -1152,8 +1150,9 @@ void AvoidanceModule::addNewShiftLines(
   // farther avoidance.
   for (const auto & sl : current_shift_lines) {
     if (sl.start_idx >= min_start_idx) {
-      DEBUG_PRINT(
-        "sl.start_idx = %lu, this sl starts after new proposal. remove this one.", sl.start_idx);
+      RCLCPP_DEBUG(
+        getLogger(), "sl.start_idx = %lu, this sl starts after new proposal. remove this one.",
+        sl.start_idx);
       continue;
     }
 
@@ -1171,7 +1170,7 @@ void AvoidanceModule::addNewShiftLines(
       }
     }
 
-    DEBUG_PRINT("sl.start_idx = %lu, no conflict. keep this one.", sl.start_idx);
+    RCLCPP_DEBUG(getLogger(), "sl.start_idx = %lu, no conflict. keep this one.", sl.start_idx);
     future.push_back(sl);
   }
 
@@ -1222,7 +1221,7 @@ bool AvoidanceModule::isValidShiftLine(
   // check if the vehicle is in road. (yaw angle is not considered)
   {
     const auto minimum_distance = 0.5 * planner_data_->parameters.vehicle_width +
-                                  parameters_->hard_road_shoulder_margin -
+                                  parameters_->hard_drivable_bound_margin -
                                   parameters_->max_deviation_from_lane;
 
     const size_t start_idx = shift_lines.front().start_idx;
